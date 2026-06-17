@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { SignInButton } from "@clerk/nextjs";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
+import { VoteButtons } from "@/components/VoteButtons";
+import { CommentForm } from "@/components/CommentForm";
 
 async function getFind(id: string) {
   return prisma.find.findFirst({
@@ -47,6 +51,14 @@ export default async function FindDetailPage({
   const find = await getFind(id);
   if (!find) notFound();
 
+  const user = await getCurrentUser();
+  const myVote = user
+    ? await prisma.vote.findUnique({
+        where: { findId_userId: { findId: find.id, userId: user.id } },
+        select: { value: true },
+      })
+    : null;
+
   const category = CATEGORY_BY_VALUE.get(find.category);
   const cover = find.images[0];
 
@@ -77,10 +89,16 @@ export default async function FindDetailPage({
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-2xl font-bold">{formatPrice(find.price)}</p>
-          <p className="text-sm text-zinc-500">
+          <p className="mb-2 text-sm text-zinc-500">
             Seen on {SOURCE_LABELS[find.sourceSite]} · submitted by{" "}
-            {find.submittedByUser.username} · ▲ {find.score}
+            {find.submittedByUser.username}
           </p>
+          <VoteButtons
+            findId={find.id}
+            initialScore={find.score}
+            initialUserVote={myVote?.value ?? 0}
+            canVote={!!user}
+          />
         </div>
         <a
           href={find.url}
@@ -100,9 +118,22 @@ export default async function FindDetailPage({
         <h2 className="mb-4 text-lg font-bold">
           Discussion ({find.comments.length})
         </h2>
+
+        <div className="mb-6">
+          {user ? (
+            <CommentForm findId={find.id} />
+          ) : (
+            <SignInButton mode="modal">
+              <button className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                Sign in to comment
+              </button>
+            </SignInButton>
+          )}
+        </div>
+
         {find.comments.length === 0 ? (
           <p className="text-sm text-zinc-500">
-            No comments yet. Sign in to start the conversation.
+            No comments yet. Be the first.
           </p>
         ) : (
           <ul className="flex flex-col gap-4">

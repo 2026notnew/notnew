@@ -6,7 +6,23 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { requireStaff } from "@/lib/admin";
 import { CATEGORIES } from "@/lib/categories";
+import { createUploadUrl, isAllowedImageUrl } from "@/lib/s3";
 import type { Category, SourceSite } from "@prisma/client";
+
+// --- Image uploads ---
+
+export async function requestUploadUrl(
+  contentType: string,
+): Promise<{ uploadUrl: string; publicUrl: string } | { error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in to upload." };
+  try {
+    const { uploadUrl, publicUrl } = await createUploadUrl(contentType);
+    return { uploadUrl, publicUrl };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Upload failed." };
+  }
+}
 
 const VALID_CATEGORIES = new Set<string>(CATEGORIES.map((c) => c.value));
 const VALID_SOURCES = new Set<SourceSite>([
@@ -50,6 +66,13 @@ export async function submitFind(
   if (price !== null && (Number.isNaN(price) || price < 100))
     return { error: "NotNew is for items $100 and up." };
 
+  // Only accept image URLs we minted (uploaded to our own bucket/CDN).
+  const images = formData
+    .getAll("images")
+    .map(String)
+    .filter((u) => isAllowedImageUrl(u))
+    .slice(0, 12);
+
   // Dedup on exact URL.
   const dupe = await prisma.find.findFirst({ where: { url } });
   if (dupe) return { error: "That link has already been submitted." };
@@ -63,7 +86,7 @@ export async function submitFind(
       sourceSite: sourceSite as SourceSite,
       price,
       eraTag,
-      images: [],
+      images,
       status: "PENDING",
       submittedBy: user.id,
     },
@@ -114,4 +137,92 @@ export async function resolveFlag(formData: FormData): Promise<void> {
   });
 
   revalidatePath("/admin");
+}
+
+// --- Voting ---
+
+export async function voteOnFind(
+  findId: string,
+  value: 1 | -1,
+): Promise<{ score: number; userVote: number } | { error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in to vote." };
+
+  const existing = await prisma.vote.findUnique({
+    where: { findId_userId: { findId, userId: user.id } },
+  });
+
+  // Clicking the same direction again clears the vote (toggle off).
+  const clearing = existing?.value === value;
+
+  await prisma.$transaction(async (tx) => {
+    if (clearing) {
+      await tx.vote.delete({
+        where: { findId_userId: { findId, userId: user.id } },
+      });
+    } else {
+      await tx.vote.upsert({
+        where: { findId_userId: { findId, userId: user.id } },
+        create: { findId, userId: user.id, value },
+        update: { value },
+      });
+    }
+
+    const agg = await tx.vote.aggregate({
+      where: { findId },
+      _sum: { value: true },
+    });
+    await tx.find.update({
+      where: { id: findId },
+      data: { score: agg._sum.value ?? 0 },
+    });
+  });
+
+  const agg = await prisma.vote.aggregate({
+    where: { findId },
+    _sum: { value: true },
+  });
+
+  revalidatePath(`/finds/${findId}`);
+  revalidatePath("/");
+  return { score: agg._sum.value ?? 0, userVote: clearing ? 0 : value };
+}
+
+// --- Commenting ---
+
+export type CommentState = { error?: string; ok?: boolean } | null;
+
+export async function addComment(
+  _prev: CommentState,
+  formData: FormData,
+): Promise<CommentState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in to comment." };
+
+  const findId = String(formData.get("findId") ?? "");
+  const body = String(formData.get("body") ?? "").trim();
+  const parentId = String(formData.get("parentId") ?? "") || null;
+
+  if (!findId) return { error: "Missing find." };
+  if (body.length < 2) return { error: "Say a little more." };
+  if (body.length > 5000) return { error: "That's too long." };
+
+  // WordPress-style: a user's first comment is held for approval; once they
+  // have one approved comment, the rest post immediately.
+  const priorApproved = await prisma.comment.count({
+    where: { userId: user.id, approved: true },
+  });
+  const approved = priorApproved > 0;
+
+  await prisma.comment.create({
+    data: { findId, userId: user.id, body, parentId, approved },
+  });
+
+  revalidatePath(`/finds/${findId}`);
+  return {
+    ok: true,
+    error: approved
+      ? undefined
+      : "Thanks — your first comment is held for review before it appears.",
+  };
 }

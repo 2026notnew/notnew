@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { submitFind, type SubmitState } from "@/lib/actions";
 import { CATEGORIES, SOURCE_LABELS } from "@/lib/categories";
+import { ImageUploader } from "@/components/ImageUploader";
 
 const inputClass =
   "w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-100";
@@ -98,6 +99,8 @@ export function SubmitForm() {
           <input name="eraTag" placeholder="1960s" className={inputClass} />
         </label>
       </div>
+
+      <ImageUploader />
 
       <button
         type="submit"
