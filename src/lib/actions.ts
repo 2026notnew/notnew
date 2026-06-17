@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { requireStaff } from "@/lib/admin";
 import { CATEGORIES } from "@/lib/categories";
 import type { Category, SourceSite } from "@prisma/client";
 
@@ -70,4 +71,47 @@ export async function submitFind(
 
   revalidatePath("/");
   redirect("/submit?submitted=1");
+}
+
+// --- Moderation (staff only) ---
+
+export async function approveFind(formData: FormData): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const featured = formData.get("featured") === "on";
+  if (!id) return;
+
+  await prisma.find.update({
+    where: { id },
+    data: { status: "APPROVED", featured },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+export async function rejectFind(formData: FormData): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await prisma.find.update({
+    where: { id },
+    data: { status: "REJECTED" },
+  });
+
+  revalidatePath("/admin");
+}
+
+export async function resolveFlag(formData: FormData): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await prisma.flag.update({
+    where: { id },
+    data: { status: "RESOLVED" },
+  });
+
+  revalidatePath("/admin");
 }

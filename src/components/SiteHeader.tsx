@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import { CATEGORIES } from "@/lib/categories";
+import { isStaff } from "@/lib/admin";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const staff = await isStaff();
+
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-black/90">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -24,6 +27,14 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-3">
           <Show when="signed-in">
+            {staff && (
+              <Link
+                href="/admin"
+                className="text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              >
+                Moderation
+              </Link>
+            )}
             <Link
               href="/submit"
               className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
