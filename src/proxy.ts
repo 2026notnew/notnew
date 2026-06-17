@@ -2,8 +2,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Routes that require an authenticated user. Browsing/reading stays public;
 // submitting, voting, commenting, and admin are gated.
+// /submit is gated in-page with a friendly sign-in prompt rather than a hard
+// 404, so it stays out of this list. APIs and admin hard-protect.
 const isProtectedRoute = createRouteMatcher([
-  "/submit(.*)",
   "/admin(.*)",
   "/api/finds(.*)",
   "/api/votes(.*)",

@@ -1,0 +1,125 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
+import { CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
+
+async function getFind(id: string) {
+  return prisma.find.findFirst({
+    where: { id, status: "APPROVED" },
+    include: {
+      submittedByUser: { select: { username: true } },
+      comments: {
+        where: { approved: true, parentId: null },
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { username: true } } },
+      },
+    },
+  });
+}
+
+function formatPrice(price: number | null): string {
+  if (price == null) return "Price on listing";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const find = await getFind(id);
+  if (!find) return { title: "Not found — NotNew" };
+  return { title: `${find.title} — NotNew`, description: find.description };
+}
+
+export default async function FindDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const find = await getFind(id);
+  if (!find) notFound();
+
+  const category = CATEGORY_BY_VALUE.get(find.category);
+  const cover = find.images[0];
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-8">
+      <div className="mb-4 text-sm text-zinc-500">
+        {category && (
+          <Link href={`/categories/${category.slug}`} className="hover:underline">
+            {category.label}
+          </Link>
+        )}
+        {find.eraTag && <span> · {find.eraTag}</span>}
+      </div>
+
+      <h1 className="text-3xl font-black tracking-tight">{find.title}</h1>
+
+      <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cover} alt={find.title} className="w-full object-cover" />
+        ) : (
+          <div className="flex aspect-[16/9] items-center justify-center text-zinc-400">
+            No image yet
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-2xl font-bold">{formatPrice(find.price)}</p>
+          <p className="text-sm text-zinc-500">
+            Seen on {SOURCE_LABELS[find.sourceSite]} · submitted by{" "}
+            {find.submittedByUser.username} · ▲ {find.score}
+          </p>
+        </div>
+        <a
+          href={find.url}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+        >
+          View original listing →
+        </a>
+      </div>
+
+      <p className="mt-6 whitespace-pre-line leading-relaxed text-zinc-700 dark:text-zinc-300">
+        {find.description}
+      </p>
+
+      <section className="mt-12 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <h2 className="mb-4 text-lg font-bold">
+          Discussion ({find.comments.length})
+        </h2>
+        {find.comments.length === 0 ? (
+          <p className="text-sm text-zinc-500">
+            No comments yet. Sign in to start the conversation.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-4">
+            {find.comments.map((c) => (
+              <li
+                key={c.id}
+                className="rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+              >
+                <p className="text-sm font-semibold">{c.user.username}</p>
+                <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
+                  {c.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  );
+}
