@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum FindStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SourceSite {
+  EBAY
+  ETSY
+  CRAIGSLIST
+  FACEBOOK
+  HAMB
+  GARAGE_JOURNAL
+  OTHER
+}
+
+enum Category {
+  ROCK_POSTERS
+  AUTOMOTIVE
+  PETROLIANA
+  GARAGE_TOOLS
+  MOTORCYCLES
+  WATCHES
+}
+
+enum FlagReason {
+  ALREADY_SOLD
+  NOT_VINTAGE
+  UNDER_100
+  SPAM
+  WRONG_CATEGORY
+  BROKEN_LINK
+  OTHER
+}
+
+enum FlagStatus {
+  OPEN
+  RESOLVED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  username  String   @unique
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  finds    Find[]
+  comments Comment[]
+  votes    Vote[]
+  flags    Flag[]
+
+  @@index([clerkId])
+  @@index([username])
+}
+
+model Find {
+  id          String     @id @default(cuid())
+  url         String
+  title       String
+  description String
+  price       Float?
+  sourceSite  SourceSite
+  images      String[]
+  category    Category
+  eraTag      String?
+  featured    Boolean    @default(false)
+  status      FindStatus @default(PENDING)
+  score       Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  submittedBy     String
+  submittedByUser User   @relation(fields: [submittedBy], references: [id])
+
+  comments Comment[]
+  votes    Vote[]
+  flags    Flag[]
+
+  @@index([status, category])
+  @@index([status, featured])
+  @@index([score, createdAt])
+  @@index([submittedBy])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  parentId  String?
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  findId String
+  find   Find   @relation(fields: [findId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([findId, approved])
+  @@index([userId])
+}
+
+model Vote {
+  value     Int
+  createdAt DateTime @default(now())
+
+  findId String
+  find   Find   @relation(fields: [findId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@id([findId, userId])
+  @@index([findId])
+}
+
+model Flag {
+  id        String     @id @default(cuid())
+  reason    FlagReason
+  notes     String?
+  status    FlagStatus @default(OPEN)
+  createdAt DateTime   @default(now())
+
+  findId String
+  find   Find   @relation(fields: [findId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([findId])
+}
