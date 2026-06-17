@@ -18,3 +18,15 @@ export async function isStaff(): Promise<boolean> {
   const user = await getCurrentUser();
   return !!user && (user.role === "ADMIN" || user.role === "MODERATOR");
 }
+
+/**
+ * Returns the current user only if they are an ADMIN. Used for sensitive
+ * operations like account management that moderators should not perform.
+ */
+export async function requireAdmin(): Promise<User> {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    notFound();
+  }
+  return user;
+}

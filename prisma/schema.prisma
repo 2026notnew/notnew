@@ -12,6 +12,12 @@ enum UserRole {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  PAUSED
+  BANNED
+}
+
 enum FindStatus {
   PENDING
   APPROVED
@@ -54,13 +60,14 @@ enum FlagStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  email     String   @unique
-  username  String   @unique
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String     @id @default(cuid())
+  clerkId   String     @unique
+  email     String     @unique
+  username  String     @unique
+  role      UserRole   @default(USER)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   finds    Find[]
   comments Comment[]

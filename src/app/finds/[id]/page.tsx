@@ -5,6 +5,7 @@ import { SignInButton } from "@clerk/nextjs";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
+import { setFeatured, unpublishFind } from "@/lib/actions";
 import { VoteButtons } from "@/components/VoteButtons";
 import { CommentForm } from "@/components/CommentForm";
 import { FlagButton } from "@/components/FlagButton";
@@ -62,6 +63,7 @@ export default async function FindDetailPage({
 
   const category = CATEGORY_BY_VALUE.get(find.category);
   const cover = find.images[0];
+  const isStaff = user?.role === "ADMIN" || user?.role === "MODERATOR";
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -75,6 +77,35 @@ export default async function FindDetailPage({
       </div>
 
       <h1 className="text-3xl font-black tracking-tight">{find.title}</h1>
+
+      {isStaff && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="font-semibold text-zinc-500">Staff:</span>
+          <form action={setFeatured}>
+            <input type="hidden" name="id" value={find.id} />
+            <input
+              type="hidden"
+              name="featured"
+              value={find.featured ? "false" : "true"}
+            />
+            <button className="rounded border border-zinc-300 px-2 py-1 font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+              {find.featured ? "Unfeature" : "Feature"}
+            </button>
+          </form>
+          <form action={unpublishFind}>
+            <input type="hidden" name="id" value={find.id} />
+            <button className="rounded border border-zinc-300 px-2 py-1 font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+              Unpublish
+            </button>
+          </form>
+          <Link
+            href="/admin"
+            className="text-zinc-500 underline-offset-2 hover:underline"
+          >
+            Open moderation →
+          </Link>
+        </div>
+      )}
 
       <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
         {cover ? (

@@ -4,10 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { requireStaff } from "@/lib/admin";
+import { requireStaff, requireAdmin } from "@/lib/admin";
 import { CATEGORIES } from "@/lib/categories";
 import { createUploadUrl, isAllowedImageUrl, deleteImages } from "@/lib/s3";
 import type { Category, SourceSite } from "@prisma/client";
+
+// Shown to paused/banned users when they attempt to contribute.
+const BLOCKED_MSG =
+  "Your account can't do that right now. If you think this is a mistake, contact support.";
 
 // --- Image uploads ---
 
@@ -16,6 +20,7 @@ export async function requestUploadUrl(
 ): Promise<{ uploadUrl: string; publicUrl: string } | { error: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: "Sign in to upload." };
+  if (user.status !== "ACTIVE") return { error: BLOCKED_MSG };
   try {
     const { uploadUrl, publicUrl } = await createUploadUrl(contentType);
     return { uploadUrl, publicUrl };
@@ -43,6 +48,7 @@ export async function submitFind(
 ): Promise<SubmitState> {
   const user = await getCurrentUser();
   if (!user) return { error: "You must be signed in to submit a find." };
+  if (user.status !== "ACTIVE") return { error: BLOCKED_MSG };
 
   const url = String(formData.get("url") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
@@ -195,6 +201,7 @@ export async function voteOnFind(
 ): Promise<{ score: number; userVote: number } | { error: string }> {
   const user = await getCurrentUser();
   if (!user) return { error: "Sign in to vote." };
+  if (user.status !== "ACTIVE") return { error: BLOCKED_MSG };
 
   const existing = await prisma.vote.findUnique({
     where: { findId_userId: { findId, userId: user.id } },
@@ -246,6 +253,7 @@ export async function addComment(
 ): Promise<CommentState> {
   const user = await getCurrentUser();
   if (!user) return { error: "Sign in to comment." };
+  if (user.status !== "ACTIVE") return { error: BLOCKED_MSG };
 
   const findId = String(formData.get("findId") ?? "");
   const body = String(formData.get("body") ?? "").trim();
@@ -295,6 +303,7 @@ export async function submitFlag(
 ): Promise<FlagState> {
   const user = await getCurrentUser();
   if (!user) return { error: "Sign in to flag a listing." };
+  if (user.status !== "ACTIVE") return { error: BLOCKED_MSG };
 
   const findId = String(formData.get("findId") ?? "");
   const reason = String(formData.get("reason") ?? "");
@@ -320,4 +329,41 @@ export async function submitFlag(
 
   revalidatePath("/admin");
   return { ok: true };
+}
+
+// --- Account management (ADMIN only) ---
+
+const VALID_STATUSES = new Set(["ACTIVE", "PAUSED", "BANNED"]);
+const VALID_ROLES = new Set(["USER", "MODERATOR", "ADMIN"]);
+
+export async function setUserStatus(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!userId || !VALID_STATUSES.has(status)) return;
+
+  // Can't change your own status — prevents locking yourself out.
+  if (userId === admin.id) return;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { status: status as never },
+  });
+  revalidatePath("/admin/users");
+}
+
+export async function setUserRole(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  const role = String(formData.get("role") ?? "");
+  if (!userId || !VALID_ROLES.has(role)) return;
+
+  // Can't change your own role — prevents accidental self-demotion.
+  if (userId === admin.id) return;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: role as never },
+  });
+  revalidatePath("/admin/users");
 }

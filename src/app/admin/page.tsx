@@ -51,11 +51,21 @@ export default async function AdminPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-black tracking-tight">Moderation</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Signed in as {staff.username} · {staff.role.toLowerCase()}
-        </p>
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight">Moderation</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Signed in as {staff.username} · {staff.role.toLowerCase()}
+          </p>
+        </div>
+        {staff.role === "ADMIN" && (
+          <Link
+            href="/admin/users"
+            className="shrink-0 rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            Manage accounts →
+          </Link>
+        )}
       </header>
 
       <section className="mb-12">
