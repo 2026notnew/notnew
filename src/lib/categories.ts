@@ -42,6 +42,12 @@ export const CATEGORIES: {
     label: "Watches",
     blurb: "Vintage and collectible timepieces.",
   },
+  {
+    value: "MID_CENTURY_MODERN",
+    slug: "mid-century-modern",
+    label: "Mid-Century Modern",
+    blurb: "Furniture, lighting, and design from the mid-century era.",
+  },
 ];
 
 export const CATEGORY_BY_SLUG = new Map(CATEGORIES.map((c) => [c.slug, c]));

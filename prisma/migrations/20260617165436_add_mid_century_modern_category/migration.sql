@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "Category" ADD VALUE 'MID_CENTURY_MODERN';
