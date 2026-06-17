@@ -122,7 +122,8 @@ export default async function FindDetailPage({
         <div>
           <p className="text-2xl font-bold">{formatPrice(find.price)}</p>
           <p className="mb-2 text-sm text-zinc-500">
-            Seen on {SOURCE_LABELS[find.sourceSite]} · submitted by{" "}
+            Seen on {SOURCE_LABELS[find.sourceSite]}
+            {find.location && <> · 📍 {find.location}</>} · submitted by{" "}
             {find.submittedByUser.username}
           </p>
           <VoteButtons

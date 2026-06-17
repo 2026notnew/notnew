@@ -57,6 +57,7 @@ export async function submitFind(
   const sourceSite = String(formData.get("sourceSite") ?? "");
   const priceRaw = String(formData.get("price") ?? "").trim();
   const eraTag = String(formData.get("eraTag") ?? "").trim() || null;
+  const location = String(formData.get("location") ?? "").trim().slice(0, 120) || null;
 
   if (!url || !/^https?:\/\//.test(url))
     return { error: "Enter a valid link starting with http(s)://" };
@@ -92,6 +93,7 @@ export async function submitFind(
       sourceSite: sourceSite as SourceSite,
       price,
       eraTag,
+      location,
       images,
       status: "PENDING",
       submittedBy: user.id,

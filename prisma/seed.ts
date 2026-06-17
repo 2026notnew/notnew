@@ -12,6 +12,7 @@ const SEED_FINDS: {
   category: Category;
   sourceSite: SourceSite;
   eraTag: string;
+  location?: string;
   featured: boolean;
   score: number;
 }[] = [

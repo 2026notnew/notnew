@@ -19,6 +19,7 @@ const findCardSelect = {
   images: true,
   category: true,
   eraTag: true,
+  location: true,
   featured: true,
   score: true,
   createdAt: true,

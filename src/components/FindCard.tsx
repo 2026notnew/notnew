@@ -73,12 +73,15 @@ export function FindCard({ find, featured = false }: { find: FindCardData; featu
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between pt-2 text-sm">
+        <div className="mt-auto flex items-end justify-between pt-2 text-sm">
           <span className="font-semibold text-zinc-900 dark:text-zinc-100">
             {formatPrice(find.price)}
           </span>
-          <span className="text-xs text-zinc-500">
+          <span className="text-right text-xs text-zinc-500">
             {SOURCE_LABELS[find.sourceSite]} · ▲ {find.score}
+            {find.location && (
+              <span className="mt-0.5 block text-zinc-400">📍 {find.location}</span>
+            )}
           </span>
         </div>
       </div>

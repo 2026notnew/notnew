@@ -88,6 +88,7 @@ model Find {
   images      String[]
   category    Category
   eraTag      String?
+  location    String?
   featured    Boolean    @default(false)
   status      FindStatus @default(PENDING)
   score       Int        @default(0)

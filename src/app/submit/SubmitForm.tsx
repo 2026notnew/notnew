@@ -98,6 +98,15 @@ export function SubmitForm() {
           Era / decade (optional)
           <input name="eraTag" placeholder="1960s" className={inputClass} />
         </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Location (optional)
+          <input
+            name="location"
+            placeholder="Portland, OR"
+            className={inputClass}
+          />
+        </label>
       </div>
 
       <ImageUploader />
