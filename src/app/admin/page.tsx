@@ -2,8 +2,16 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/admin";
-import { approveFind, rejectFind, resolveFlag } from "@/lib/actions";
+import {
+  approveFind,
+  rejectFind,
+  resolveFlag,
+  setFeatured,
+  unpublishFind,
+  deleteFind,
+} from "@/lib/actions";
 import { CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export const metadata: Metadata = { title: "Moderation — NotNew" };
 
@@ -20,7 +28,7 @@ const FLAG_LABELS: Record<string, string> = {
 export default async function AdminPage() {
   const staff = await requireStaff();
 
-  const [pending, openFlags] = await Promise.all([
+  const [pending, openFlags, published] = await Promise.all([
     prisma.find.findMany({
       where: { status: "PENDING" },
       orderBy: { createdAt: "asc" },
@@ -33,6 +41,11 @@ export default async function AdminPage() {
         find: { select: { id: true, title: true } },
         user: { select: { username: true } },
       },
+    }),
+    prisma.find.findMany({
+      where: { status: "APPROVED" },
+      orderBy: { createdAt: "desc" },
+      include: { submittedByUser: { select: { username: true } } },
     }),
   ]);
 
@@ -152,6 +165,77 @@ export default async function AdminPage() {
                 </form>
               </li>
             ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-12">
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-zinc-500">
+          Published ({published.length})
+        </h2>
+
+        {published.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-zinc-300 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700">
+            Nothing published yet.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {published.map((find) => {
+              const category = CATEGORY_BY_VALUE.get(find.category);
+              return (
+                <li
+                  key={find.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/finds/${find.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {find.title}
+                    </Link>
+                    {find.featured && (
+                      <span className="ml-2 rounded bg-amber-500 px-1.5 py-0.5 text-xs font-semibold text-black">
+                        Featured
+                      </span>
+                    )}
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {category?.label} · {SOURCE_LABELS[find.sourceSite]} · ▲{" "}
+                      {find.score} · by {find.submittedByUser.username}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <form action={setFeatured}>
+                      <input type="hidden" name="id" value={find.id} />
+                      <input
+                        type="hidden"
+                        name="featured"
+                        value={find.featured ? "false" : "true"}
+                      />
+                      <button className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                        {find.featured ? "Unfeature" : "Feature"}
+                      </button>
+                    </form>
+                    <form action={unpublishFind}>
+                      <input type="hidden" name="id" value={find.id} />
+                      <button className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                        Unpublish
+                      </button>
+                    </form>
+                    <form action={deleteFind}>
+                      <input type="hidden" name="id" value={find.id} />
+                      <ConfirmButton
+                        message={`Permanently delete “${find.title}”? This removes its comments, votes, flags, and images and cannot be undone.`}
+                        className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+                      >
+                        Delete
+                      </ConfirmButton>
+                    </form>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

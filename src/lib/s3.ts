@@ -1,4 +1,8 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectsCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "crypto";
 
@@ -46,4 +50,27 @@ export async function createUploadUrl(contentType: string): Promise<{
 export function isAllowedImageUrl(url: string): boolean {
   if (CDN && url.startsWith(`https://${CDN}/finds/`)) return true;
   return url.startsWith(`https://${BUCKET}.s3.${REGION}.amazonaws.com/finds/`);
+}
+
+/** Extract the S3 object key from one of our public image URLs. */
+function keyFromUrl(url: string): string | null {
+  if (!isAllowedImageUrl(url)) return null;
+  const idx = url.indexOf("/finds/");
+  return idx === -1 ? null : url.slice(idx + 1); // drop leading slash
+}
+
+/** Best-effort delete of uploaded images; never throws. */
+export async function deleteImages(urls: string[]): Promise<void> {
+  const keys = urls.map(keyFromUrl).filter((k): k is string => !!k);
+  if (keys.length === 0) return;
+  try {
+    await s3.send(
+      new DeleteObjectsCommand({
+        Bucket: BUCKET,
+        Delete: { Objects: keys.map((Key) => ({ Key })) },
+      }),
+    );
+  } catch {
+    // Orphaned objects are harmless; don't block the delete on cleanup.
+  }
 }

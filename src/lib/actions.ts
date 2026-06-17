@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { requireStaff } from "@/lib/admin";
 import { CATEGORIES } from "@/lib/categories";
-import { createUploadUrl, isAllowedImageUrl } from "@/lib/s3";
+import { createUploadUrl, isAllowedImageUrl, deleteImages } from "@/lib/s3";
 import type { Category, SourceSite } from "@prisma/client";
 
 // --- Image uploads ---
@@ -137,6 +137,54 @@ export async function resolveFlag(formData: FormData): Promise<void> {
   });
 
   revalidatePath("/admin");
+}
+
+// --- Post-publication management (staff only) ---
+
+export async function setFeatured(formData: FormData): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const featured = String(formData.get("featured") ?? "") === "true";
+  if (!id) return;
+
+  await prisma.find.update({ where: { id }, data: { featured } });
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath(`/finds/${id}`);
+}
+
+/** Pull a published find back off the site (reversible — sets it to PENDING). */
+export async function unpublishFind(formData: FormData): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await prisma.find.update({
+    where: { id },
+    data: { status: "PENDING", featured: false },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath(`/finds/${id}`);
+}
+
+/** Permanently delete a find. Comments/votes/flags cascade; images are purged. */
+export async function deleteFind(formData: FormData): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const find = await prisma.find.findUnique({
+    where: { id },
+    select: { images: true },
+  });
+  if (!find) return;
+
+  await prisma.find.delete({ where: { id } });
+  await deleteImages(find.images);
+
+  revalidatePath("/admin");
+  revalidatePath("/");
 }
 
 // --- Voting ---
