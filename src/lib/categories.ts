@@ -1,5 +1,7 @@
 import type { Category, SourceSite } from "@prisma/client";
 
+// Keep this list alphabetical by label — it drives nav, the categories index,
+// the submit dropdown, and find cards, so order here is order everywhere.
 export const CATEGORIES: {
   value: Category;
   slug: string;
@@ -7,22 +9,10 @@ export const CATEGORIES: {
   blurb: string;
 }[] = [
   {
-    value: "ROCK_POSTERS",
-    slug: "rock-posters",
-    label: "Rock Posters",
-    blurb: "Concert posters, handbills, and music memorabilia.",
-  },
-  {
     value: "AUTOMOTIVE",
     slug: "automotive",
     label: "Automotive",
     blurb: "Hot rods, classics, parts, and project cars.",
-  },
-  {
-    value: "PETROLIANA",
-    slug: "petroliana",
-    label: "Petroliana",
-    blurb: "Gas station signs, pumps, oil cans, and garage advertising.",
   },
   {
     value: "GARAGE_TOOLS",
@@ -31,22 +21,34 @@ export const CATEGORIES: {
     blurb: "Vintage tools, workshop equipment, and shop ephemera.",
   },
   {
+    value: "MID_CENTURY_MODERN",
+    slug: "mid-century-modern",
+    label: "Mid-Century Modern",
+    blurb: "Furniture, lighting, and design from the mid-century era.",
+  },
+  {
     value: "MOTORCYCLES",
     slug: "motorcycles",
     label: "Motorcycles",
     blurb: "Vintage bikes, parts, and two-wheeled curiosities.",
   },
   {
+    value: "PETROLIANA",
+    slug: "petroliana",
+    label: "Petroliana",
+    blurb: "Gas station signs, pumps, oil cans, and garage advertising.",
+  },
+  {
+    value: "ROCK_POSTERS",
+    slug: "rock-posters",
+    label: "Rock Posters",
+    blurb: "Concert posters, handbills, and music memorabilia.",
+  },
+  {
     value: "WATCHES",
     slug: "watches",
     label: "Watches",
     blurb: "Vintage and collectible timepieces.",
-  },
-  {
-    value: "MID_CENTURY_MODERN",
-    slug: "mid-century-modern",
-    label: "Mid-Century Modern",
-    blurb: "Furniture, lighting, and design from the mid-century era.",
   },
 ];
 

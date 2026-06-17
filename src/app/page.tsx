@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { FindCard } from "@/components/FindCard";
 import { getFeaturedFinds, getHotFinds } from "@/lib/queries";
-import { CATEGORIES } from "@/lib/categories";
 
 export default async function Home() {
   const [featured, hot] = await Promise.all([
@@ -39,17 +38,12 @@ export default async function Home() {
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500">
             Hot Finds
           </h2>
-          <nav className="hidden flex-wrap gap-3 text-sm text-zinc-500 sm:flex">
-            {CATEGORIES.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/categories/${c.slug}`}
-                className="hover:text-zinc-900 dark:hover:text-zinc-100"
-              >
-                {c.label}
-              </Link>
-            ))}
-          </nav>
+          <Link
+            href="/categories"
+            className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Browse all categories →
+          </Link>
         </div>
 
         {hot.length === 0 ? (

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
-import { CATEGORIES } from "@/lib/categories";
+import { CategoryMenu } from "@/components/CategoryMenu";
 import { isStaff } from "@/lib/admin";
 
 export async function SiteHeader() {
@@ -9,21 +9,12 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-black/90">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/" className="text-xl font-black tracking-tight">
-          NotNew
-        </Link>
-
-        <nav className="hidden items-center gap-4 text-sm font-medium text-zinc-600 md:flex dark:text-zinc-400">
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c.slug}
-              href={`/categories/${c.slug}`}
-              className="hover:text-zinc-900 dark:hover:text-zinc-100"
-            >
-              {c.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex items-center gap-5">
+          <Link href="/" className="text-xl font-black tracking-tight">
+            NotNew
+          </Link>
+          <CategoryMenu />
+        </div>
 
         <div className="flex items-center gap-3">
           <Show when="signed-in">
