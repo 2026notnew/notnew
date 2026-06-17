@@ -12,6 +12,14 @@ function formatPrice(price: number | null): string {
   }).format(price);
 }
 
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
 export function FindCard({ find, featured = false }: { find: FindCardData; featured?: boolean }) {
   const category = CATEGORY_BY_VALUE.get(find.category);
   const cover = find.images[0];
@@ -48,7 +56,7 @@ export function FindCard({ find, featured = false }: { find: FindCardData; featu
           )}
           {unavailable && (
             <span className="absolute left-2 top-2 rounded bg-zinc-900/85 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-              {avail === "SOLD" ? "Sold" : "No longer available"}
+              {avail === "SOLD" ? "Too Late" : "No longer available"}
             </span>
           )}
         </div>
@@ -88,7 +96,8 @@ export function FindCard({ find, featured = false }: { find: FindCardData; featu
             {formatPrice(find.price)}
           </span>
           <span className="text-right text-xs text-zinc-500">
-            {SOURCE_LABELS[find.sourceSite]} · ▲ {find.score}
+            Seen on {SOURCE_LABELS[find.sourceSite]} on{" "}
+            {formatDate(find.createdAt)}
             {find.location && (
               <span className="mt-0.5 block text-zinc-400">📍 {find.location}</span>
             )}

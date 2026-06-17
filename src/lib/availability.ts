@@ -17,6 +17,6 @@ export function effectiveAvailability(find: {
 
 export const AVAILABILITY_LABELS: Record<Availability, string> = {
   AVAILABLE: "Available",
-  SOLD: "Sold",
+  SOLD: "Too Late",
   EXPIRED: "No longer available",
 };

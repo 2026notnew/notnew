@@ -84,7 +84,7 @@ export default async function FindDetailPage({
       {unavailable && (
         <div className="mt-3 rounded-md bg-zinc-900 px-3 py-2 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
           {avail === "SOLD"
-            ? "This item has sold."
+            ? "Too late — this item has sold."
             : "This item is no longer available."}{" "}
           <span className="font-normal opacity-80">
             We keep the listing here as a record.

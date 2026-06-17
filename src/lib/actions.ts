@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireStaff, requireAdmin } from "@/lib/admin";
 import { CATEGORIES } from "@/lib/categories";
 import { createUploadUrl, isAllowedImageUrl, deleteImages } from "@/lib/s3";
+import { extractLocation } from "@/lib/scrape";
 import type { Category, SourceSite } from "@prisma/client";
 
 // Shown to paused/banned users when they attempt to contribute.
@@ -57,7 +58,7 @@ export async function submitFind(
   const sourceSite = String(formData.get("sourceSite") ?? "");
   const priceRaw = String(formData.get("price") ?? "").trim();
   const eraTag = String(formData.get("eraTag") ?? "").trim() || null;
-  const location = String(formData.get("location") ?? "").trim().slice(0, 120) || null;
+  let location = String(formData.get("location") ?? "").trim().slice(0, 120) || null;
   const expiresRaw = String(formData.get("expiresAt") ?? "").trim();
   let expiresAt: Date | null = null;
   if (expiresRaw) {
@@ -89,6 +90,9 @@ export async function submitFind(
   // Dedup on exact URL.
   const dupe = await prisma.find.findFirst({ where: { url } });
   if (dupe) return { error: "That link has already been submitted." };
+
+  // Fall back to scraping the listing for a location when none was entered.
+  if (!location) location = await extractLocation(url);
 
   await prisma.find.create({
     data: {
