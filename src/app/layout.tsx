@@ -34,8 +34,24 @@ export default function RootLayout({
         <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
           <SiteHeader />
           <div className="flex-1">{children}</div>
-          <footer className="border-t border-zinc-200 py-8 text-center text-sm text-zinc-500 dark:border-zinc-800">
-            NotNew · Curated, never commodity.
+          <footer className="border-t border-zinc-200 py-8 dark:border-zinc-800">
+            <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 text-sm text-zinc-500">
+              <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+                <a href="/guidelines" className="hover:text-zinc-900 dark:hover:text-zinc-200">
+                  Community Guidelines
+                </a>
+                <a href="/terms" className="hover:text-zinc-900 dark:hover:text-zinc-200">
+                  Terms
+                </a>
+                <a href="/privacy" className="hover:text-zinc-900 dark:hover:text-zinc-200">
+                  Privacy
+                </a>
+                <a href="/dmca" className="hover:text-zinc-900 dark:hover:text-zinc-200">
+                  Copyright / DMCA
+                </a>
+              </nav>
+              <p>NotNew · Curated, never commodity.</p>
+            </div>
           </footer>
         </body>
       </html>

@@ -226,3 +226,50 @@ export async function addComment(
       : "Thanks — your first comment is held for review before it appears.",
   };
 }
+
+// --- Flagging ---
+
+const VALID_FLAG_REASONS = new Set([
+  "ALREADY_SOLD",
+  "NOT_VINTAGE",
+  "UNDER_100",
+  "SPAM",
+  "WRONG_CATEGORY",
+  "BROKEN_LINK",
+  "OTHER",
+]);
+
+export type FlagState = { error?: string; ok?: boolean } | null;
+
+export async function submitFlag(
+  _prev: FlagState,
+  formData: FormData,
+): Promise<FlagState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in to flag a listing." };
+
+  const findId = String(formData.get("findId") ?? "");
+  const reason = String(formData.get("reason") ?? "");
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 500) || null;
+
+  if (!findId) return { error: "Missing listing." };
+  if (!VALID_FLAG_REASONS.has(reason)) return { error: "Pick a reason." };
+
+  // One open flag per user per find — re-flagging is a no-op while it's pending.
+  const existing = await prisma.flag.findFirst({
+    where: { findId, userId: user.id, status: "OPEN" },
+  });
+  if (existing) return { ok: true };
+
+  await prisma.flag.create({
+    data: {
+      findId,
+      userId: user.id,
+      reason: reason as never,
+      notes,
+    },
+  });
+
+  revalidatePath("/admin");
+  return { ok: true };
+}

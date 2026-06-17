@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
 import { VoteButtons } from "@/components/VoteButtons";
 import { CommentForm } from "@/components/CommentForm";
+import { FlagButton } from "@/components/FlagButton";
 
 async function getFind(id: string) {
   return prisma.find.findFirst({
@@ -113,6 +114,10 @@ export default async function FindDetailPage({
       <p className="mt-6 whitespace-pre-line leading-relaxed text-zinc-700 dark:text-zinc-300">
         {find.description}
       </p>
+
+      <div className="mt-6">
+        <FlagButton findId={find.id} canFlag={!!user} />
+      </div>
 
       <section className="mt-12 border-t border-zinc-200 pt-6 dark:border-zinc-800">
         <h2 className="mb-4 text-lg font-bold">
