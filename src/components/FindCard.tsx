@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
+import { effectiveAvailability } from "@/lib/availability";
 import type { FindCardData } from "@/lib/queries";
 
 function formatPrice(price: number | null): string {
@@ -14,6 +15,8 @@ function formatPrice(price: number | null): string {
 export function FindCard({ find, featured = false }: { find: FindCardData; featured?: boolean }) {
   const category = CATEGORY_BY_VALUE.get(find.category);
   const cover = find.images[0];
+  const avail = effectiveAvailability(find);
+  const unavailable = avail !== "AVAILABLE";
 
   return (
     <article
@@ -29,16 +32,23 @@ export function FindCard({ find, featured = false }: { find: FindCardData; featu
             <img
               src={cover}
               alt={find.title}
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+              className={`h-full w-full object-cover transition duration-300 group-hover:scale-[1.02] ${
+                unavailable ? "opacity-50 grayscale" : ""
+              }`}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-zinc-400">
               <span className="text-sm">No image</span>
             </div>
           )}
-          {find.featured && (
+          {find.featured && !unavailable && (
             <span className="absolute left-2 top-2 rounded bg-amber-500 px-2 py-0.5 text-xs font-semibold text-black">
               Staff Pick
+            </span>
+          )}
+          {unavailable && (
+            <span className="absolute left-2 top-2 rounded bg-zinc-900/85 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+              {avail === "SOLD" ? "Sold" : "No longer available"}
             </span>
           )}
         </div>

@@ -58,6 +58,12 @@ export async function submitFind(
   const priceRaw = String(formData.get("price") ?? "").trim();
   const eraTag = String(formData.get("eraTag") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim().slice(0, 120) || null;
+  const expiresRaw = String(formData.get("expiresAt") ?? "").trim();
+  let expiresAt: Date | null = null;
+  if (expiresRaw) {
+    const d = new Date(expiresRaw);
+    if (!Number.isNaN(d.getTime())) expiresAt = d;
+  }
 
   if (!url || !/^https?:\/\//.test(url))
     return { error: "Enter a valid link starting with http(s)://" };
@@ -94,6 +100,7 @@ export async function submitFind(
       price,
       eraTag,
       location,
+      expiresAt,
       images,
       status: "PENDING",
       submittedBy: user.id,
@@ -156,6 +163,24 @@ export async function setFeatured(formData: FormData): Promise<void> {
   if (!id) return;
 
   await prisma.find.update({ where: { id }, data: { featured } });
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath(`/finds/${id}`);
+}
+
+const VALID_AVAILABILITY = new Set(["AVAILABLE", "SOLD", "EXPIRED"]);
+
+/** Mark a find sold / no-longer-available / available again. Card is kept. */
+export async function setAvailability(formData: FormData): Promise<void> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const availability = String(formData.get("availability") ?? "");
+  if (!id || !VALID_AVAILABILITY.has(availability)) return;
+
+  await prisma.find.update({
+    where: { id },
+    data: { availability: availability as never },
+  });
   revalidatePath("/admin");
   revalidatePath("/");
   revalidatePath(`/finds/${id}`);

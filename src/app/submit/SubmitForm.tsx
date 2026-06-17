@@ -107,6 +107,11 @@ export function SubmitForm() {
             className={inputClass}
           />
         </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          Available until (optional)
+          <input name="expiresAt" type="date" className={inputClass} />
+        </label>
       </div>
 
       <ImageUploader />

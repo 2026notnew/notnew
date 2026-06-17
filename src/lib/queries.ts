@@ -20,6 +20,8 @@ const findCardSelect = {
   category: true,
   eraTag: true,
   location: true,
+  availability: true,
+  expiresAt: true,
   featured: true,
   score: true,
   createdAt: true,

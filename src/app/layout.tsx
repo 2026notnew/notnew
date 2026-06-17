@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SiteHeader } from "@/components/SiteHeader";
+import { AccountStatusBanner } from "@/components/AccountStatusBanner";
 import { CookieNotice } from "@/components/CookieNotice";
 import "./globals.css";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
       >
         <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
           <SiteHeader />
+          <AccountStatusBanner />
           <div className="flex-1">{children}</div>
           <CookieNotice />
           <footer className="border-t border-zinc-200 py-8 dark:border-zinc-800">

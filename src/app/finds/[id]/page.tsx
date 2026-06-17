@@ -5,7 +5,8 @@ import { SignInButton } from "@clerk/nextjs";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
-import { setFeatured, unpublishFind } from "@/lib/actions";
+import { setFeatured, unpublishFind, setAvailability } from "@/lib/actions";
+import { effectiveAvailability } from "@/lib/availability";
 import { VoteButtons } from "@/components/VoteButtons";
 import { CommentForm } from "@/components/CommentForm";
 import { FlagButton } from "@/components/FlagButton";
@@ -64,6 +65,8 @@ export default async function FindDetailPage({
   const category = CATEGORY_BY_VALUE.get(find.category);
   const cover = find.images[0];
   const isStaff = user?.role === "ADMIN" || user?.role === "MODERATOR";
+  const avail = effectiveAvailability(find);
+  const unavailable = avail !== "AVAILABLE";
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -77,6 +80,17 @@ export default async function FindDetailPage({
       </div>
 
       <h1 className="text-3xl font-black tracking-tight">{find.title}</h1>
+
+      {unavailable && (
+        <div className="mt-3 rounded-md bg-zinc-900 px-3 py-2 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+          {avail === "SOLD"
+            ? "This item has sold."
+            : "This item is no longer available."}{" "}
+          <span className="font-normal opacity-80">
+            We keep the listing here as a record.
+          </span>
+        </div>
+      )}
 
       {isStaff && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs dark:border-zinc-800 dark:bg-zinc-900">
@@ -98,6 +112,37 @@ export default async function FindDetailPage({
               Unpublish
             </button>
           </form>
+
+          <span className="mx-1 text-zinc-300 dark:text-zinc-700">|</span>
+
+          {find.availability !== "SOLD" && (
+            <form action={setAvailability}>
+              <input type="hidden" name="id" value={find.id} />
+              <input type="hidden" name="availability" value="SOLD" />
+              <button className="rounded border border-zinc-300 px-2 py-1 font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                Mark sold
+              </button>
+            </form>
+          )}
+          {find.availability !== "EXPIRED" && (
+            <form action={setAvailability}>
+              <input type="hidden" name="id" value={find.id} />
+              <input type="hidden" name="availability" value="EXPIRED" />
+              <button className="rounded border border-zinc-300 px-2 py-1 font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                Mark unavailable
+              </button>
+            </form>
+          )}
+          {find.availability !== "AVAILABLE" && (
+            <form action={setAvailability}>
+              <input type="hidden" name="id" value={find.id} />
+              <input type="hidden" name="availability" value="AVAILABLE" />
+              <button className="rounded border border-zinc-300 px-2 py-1 font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                Mark available
+              </button>
+            </form>
+          )}
+
           <Link
             href="/admin"
             className="text-zinc-500 underline-offset-2 hover:underline"

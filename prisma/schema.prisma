@@ -18,6 +18,12 @@ enum UserStatus {
   BANNED
 }
 
+enum Availability {
+  AVAILABLE
+  SOLD
+  EXPIRED
+}
+
 enum FindStatus {
   PENDING
   APPROVED
@@ -85,11 +91,13 @@ model Find {
   description String
   price       Float?
   sourceSite  SourceSite
-  images      String[]
-  category    Category
-  eraTag      String?
-  location    String?
-  featured    Boolean    @default(false)
+  images       String[]
+  category     Category
+  eraTag       String?
+  location     String?
+  availability Availability @default(AVAILABLE)
+  expiresAt    DateTime?
+  featured     Boolean      @default(false)
   status      FindStatus @default(PENDING)
   score       Int        @default(0)
   createdAt   DateTime   @default(now())
