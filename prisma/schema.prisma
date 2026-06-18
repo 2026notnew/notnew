@@ -99,6 +99,8 @@ model Find {
   availability Availability @default(AVAILABLE)
   expiresAt    DateTime?
   featured     Boolean      @default(false)
+  autoIngested Boolean      @default(false)
+  externalId   String?
   status      FindStatus @default(PENDING)
   score       Int        @default(0)
   createdAt   DateTime   @default(now())
@@ -115,6 +117,21 @@ model Find {
   @@index([status, featured])
   @@index([score, createdAt])
   @@index([submittedBy])
+  @@index([externalId])
+}
+
+model SavedSearch {
+  id        String     @id @default(cuid())
+  source    SourceSite
+  query     String
+  category  Category
+  minPrice  Int        @default(100)
+  active    Boolean    @default(true)
+  lastRunAt DateTime?
+  lastCount Int        @default(0)
+  createdAt DateTime   @default(now())
+
+  @@index([active])
 }
 
 model Comment {

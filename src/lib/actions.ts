@@ -439,3 +439,52 @@ export async function setUserRole(formData: FormData): Promise<void> {
   });
   revalidatePath("/admin/users");
 }
+
+// --- Ingestion / saved searches (ADMIN only) ---
+
+export async function createSavedSearch(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const query = String(formData.get("query") ?? "").trim().slice(0, 200);
+  const source = String(formData.get("source") ?? "");
+  const category = String(formData.get("category") ?? "");
+  const minPrice = Math.max(100, Number(formData.get("minPrice") ?? 100) || 100);
+
+  if (!query || !VALID_SOURCES.has(source as SourceSite) || !VALID_CATEGORIES.has(category))
+    return;
+
+  await prisma.savedSearch.create({
+    data: {
+      query,
+      source: source as SourceSite,
+      category: category as Category,
+      minPrice,
+    },
+  });
+  revalidatePath("/admin/sources");
+}
+
+export async function toggleSavedSearch(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const s = await prisma.savedSearch.findUnique({ where: { id } });
+  if (!s) return;
+  await prisma.savedSearch.update({ where: { id }, data: { active: !s.active } });
+  revalidatePath("/admin/sources");
+}
+
+export async function deleteSavedSearch(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  await prisma.savedSearch.delete({ where: { id } });
+  revalidatePath("/admin/sources");
+}
+
+export async function runIngestionNow(): Promise<void> {
+  await requireAdmin();
+  const { runIngestion } = await import("@/lib/ingest/run");
+  await runIngestion();
+  revalidatePath("/admin/sources");
+  revalidatePath("/admin");
+}

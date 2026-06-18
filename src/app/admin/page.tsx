@@ -59,12 +59,20 @@ export default async function AdminPage() {
           </p>
         </div>
         {staff.role === "ADMIN" && (
-          <Link
-            href="/admin/users"
-            className="shrink-0 rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
-          >
-            Manage accounts →
-          </Link>
+          <div className="flex shrink-0 gap-2">
+            <Link
+              href="/admin/sources"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              Sources →
+            </Link>
+            <Link
+              href="/admin/users"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              Accounts →
+            </Link>
+          </div>
         )}
       </header>
 
