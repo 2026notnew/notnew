@@ -109,15 +109,27 @@ model Find {
   submittedBy     String
   submittedByUser User   @relation(fields: [submittedBy], references: [id])
 
-  comments Comment[]
-  votes    Vote[]
-  flags    Flag[]
+  comments  Comment[]
+  votes     Vote[]
+  flags     Flag[]
+  revisions FindRevision[]
 
   @@index([status, category])
   @@index([status, featured])
   @@index([score, createdAt])
   @@index([submittedBy])
   @@index([externalId])
+}
+
+model FindRevision {
+  id         String   @id @default(cuid())
+  findId     String
+  find       Find     @relation(fields: [findId], references: [id], onDelete: Cascade)
+  snapshot   Json // full editable state of the find before this change
+  editorName String?
+  createdAt  DateTime @default(now())
+
+  @@index([findId, createdAt])
 }
 
 model SavedSearch {

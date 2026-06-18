@@ -254,12 +254,19 @@ export async function deleteFind(formData: FormData): Promise<void> {
 
   const find = await prisma.find.findUnique({
     where: { id },
-    select: { images: true },
+    select: { images: true, revisions: { select: { snapshot: true } } },
   });
   if (!find) return;
 
-  await prisma.find.delete({ where: { id } });
-  await deleteImages(find.images);
+  // Gather every hosted image we ever held for this find — current + history.
+  const all = new Set(find.images);
+  for (const r of find.revisions) {
+    const snap = r.snapshot as { images?: string[] } | null;
+    for (const u of snap?.images ?? []) all.add(u);
+  }
+
+  await prisma.find.delete({ where: { id } }); // revisions cascade
+  await deleteImages([...all]);
 
   revalidatePath("/admin");
   revalidatePath("/");
@@ -502,18 +509,64 @@ export async function runIngestionNow(): Promise<void> {
 
 export type EditState = { error?: string; ok?: boolean } | null;
 
+// Editable state we snapshot into revision history for undo.
+type FindSnapshot = {
+  title: string;
+  description: string;
+  url: string;
+  category: string;
+  sourceSite: string;
+  price: number | null;
+  eraTag: string | null;
+  location: string | null;
+  expiresAt: string | null;
+  availability: string;
+  featured: boolean;
+  images: string[];
+  sourceImages: string[];
+};
+
+function snapshotOf(f: {
+  title: string;
+  description: string;
+  url: string;
+  category: string;
+  sourceSite: string;
+  price: number | null;
+  eraTag: string | null;
+  location: string | null;
+  expiresAt: Date | null;
+  availability: string;
+  featured: boolean;
+  images: string[];
+  sourceImages: string[];
+}): FindSnapshot {
+  return {
+    title: f.title,
+    description: f.description,
+    url: f.url,
+    category: f.category,
+    sourceSite: f.sourceSite,
+    price: f.price,
+    eraTag: f.eraTag,
+    location: f.location,
+    expiresAt: f.expiresAt ? f.expiresAt.toISOString() : null,
+    availability: f.availability,
+    featured: f.featured,
+    images: f.images,
+    sourceImages: f.sourceImages,
+  };
+}
+
 export async function updateFind(
   _prev: EditState,
   formData: FormData,
 ): Promise<EditState> {
-  await requireStaff();
+  const staff = await requireStaff();
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Missing find." };
 
-  const existing = await prisma.find.findUnique({
-    where: { id },
-    select: { images: true },
-  });
+  const existing = await prisma.find.findUnique({ where: { id } });
   if (!existing) return { error: "Find not found." };
 
   const title = String(formData.get("title") ?? "").trim();
@@ -560,6 +613,17 @@ export async function updateFind(
   if (images.length === 0 && sourceImages.length === 0)
     return { error: "Keep at least one image." };
 
+  // Snapshot the pre-edit state so the change can be undone. Images are kept
+  // (not deleted) precisely so a restore can bring them back.
+  await prisma.findRevision.create({
+    data: {
+      findId: id,
+      snapshot: snapshotOf(existing),
+      editorName: staff.username,
+    },
+  });
+  await pruneRevisions(id);
+
   await prisma.find.update({
     where: { id },
     data: {
@@ -577,12 +641,71 @@ export async function updateFind(
     },
   });
 
-  // Clean up any of our hosted images the editor removed.
-  const removed = existing.images.filter((u) => !images.includes(u));
-  if (removed.length) await deleteImages(removed);
-
   revalidatePath(`/finds/${id}`);
+  revalidatePath(`/admin/finds/${id}/edit`);
   revalidatePath("/admin");
   revalidatePath("/");
   return { ok: true };
+}
+
+// Keep history bounded — retain the most recent 25 revisions per find.
+async function pruneRevisions(findId: string): Promise<void> {
+  const old = await prisma.findRevision.findMany({
+    where: { findId },
+    orderBy: { createdAt: "desc" },
+    skip: 25,
+    select: { id: true },
+  });
+  if (old.length)
+    await prisma.findRevision.deleteMany({
+      where: { id: { in: old.map((r) => r.id) } },
+    });
+}
+
+/** Restore a find to a prior revision. The current state is snapshotted first,
+ *  so a restore is itself undoable. */
+export async function restoreRevision(formData: FormData): Promise<void> {
+  const staff = await requireStaff();
+  const revisionId = String(formData.get("revisionId") ?? "");
+  if (!revisionId) return;
+
+  const rev = await prisma.findRevision.findUnique({ where: { id: revisionId } });
+  if (!rev) return;
+  const current = await prisma.find.findUnique({ where: { id: rev.findId } });
+  if (!current) return;
+
+  const snap = rev.snapshot as unknown as FindSnapshot;
+
+  await prisma.findRevision.create({
+    data: {
+      findId: rev.findId,
+      snapshot: snapshotOf(current),
+      editorName: `${staff.username} (restore)`,
+    },
+  });
+  await pruneRevisions(rev.findId);
+
+  await prisma.find.update({
+    where: { id: rev.findId },
+    data: {
+      title: snap.title,
+      description: snap.description,
+      url: snap.url,
+      category: snap.category as Category,
+      sourceSite: snap.sourceSite as SourceSite,
+      price: snap.price,
+      eraTag: snap.eraTag,
+      location: snap.location,
+      expiresAt: snap.expiresAt ? new Date(snap.expiresAt) : null,
+      availability: snap.availability as never,
+      featured: snap.featured,
+      images: snap.images,
+      sourceImages: snap.sourceImages,
+    },
+  });
+
+  revalidatePath(`/finds/${rev.findId}`);
+  revalidatePath(`/admin/finds/${rev.findId}/edit`);
+  revalidatePath("/admin");
+  revalidatePath("/");
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { requestUploadUrl } from "@/lib/actions";
 
 /**
@@ -14,17 +14,24 @@ export function ImageManager({
   initial,
   mode,
   hint,
+  onChange,
 }: {
   name: string;
   label: string;
   initial: string[];
   mode: "upload" | "url";
   hint?: string;
+  onChange?: (urls: string[]) => void;
 }) {
   const [urls, setUrls] = useState<string[]>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+
+  useEffect(() => {
+    onChange?.(urls);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urls]);
 
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;

@@ -1,9 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { updateFind, type EditState } from "@/lib/actions";
-import { CATEGORIES, SOURCE_LABELS } from "@/lib/categories";
+import {
+  CATEGORIES,
+  CATEGORY_BY_VALUE,
+  SOURCE_LABELS,
+} from "@/lib/categories";
 import { ImageManager } from "@/components/ImageManager";
 
 const inputClass =
@@ -30,7 +34,26 @@ export function EditFindForm({ find }: { find: EditFind }) {
     null,
   );
 
+  // Live-preview state for the card.
+  const [title, setTitle] = useState(find.title);
+  const [price, setPrice] = useState(find.price?.toString() ?? "");
+  const [location, setLocation] = useState(find.location ?? "");
+  const [category, setCategory] = useState(find.category);
+  const [sourceSite, setSourceSite] = useState(find.sourceSite);
+  const [hero, setHero] = useState(find.images[0] ?? find.sourceImages[0] ?? "");
+
+  const priceLabel = price
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }).format(Number(price))
+    : "—";
+  const categoryLabel =
+    CATEGORY_BY_VALUE.get(category as never)?.label ?? category;
+
   return (
+    <div className="grid gap-8 lg:grid-cols-[1fr_minmax(0,18rem)]">
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="id" value={find.id} />
 
@@ -51,7 +74,13 @@ export function EditFindForm({ find }: { find: EditFind }) {
 
       <label className="flex flex-col gap-1 text-sm font-medium">
         Title
-        <input name="title" defaultValue={find.title} required className={inputClass} />
+        <input
+          name="title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          className={inputClass}
+        />
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium">
@@ -73,7 +102,12 @@ export function EditFindForm({ find }: { find: EditFind }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm font-medium">
           Category
-          <select name="category" defaultValue={find.category} className={inputClass}>
+          <select
+            name="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className={inputClass}
+          >
             {CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
@@ -84,7 +118,12 @@ export function EditFindForm({ find }: { find: EditFind }) {
 
         <label className="flex flex-col gap-1 text-sm font-medium">
           Source site
-          <select name="sourceSite" defaultValue={find.sourceSite} className={inputClass}>
+          <select
+            name="sourceSite"
+            value={sourceSite}
+            onChange={(e) => setSourceSite(e.target.value)}
+            className={inputClass}
+          >
             {Object.entries(SOURCE_LABELS).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
@@ -99,7 +138,8 @@ export function EditFindForm({ find }: { find: EditFind }) {
             name="price"
             type="number"
             min={100}
-            defaultValue={find.price ?? ""}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             className={inputClass}
           />
         </label>
@@ -113,7 +153,8 @@ export function EditFindForm({ find }: { find: EditFind }) {
           Location
           <input
             name="location"
-            defaultValue={find.location ?? ""}
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
             className={inputClass}
           />
         </label>
@@ -134,7 +175,8 @@ export function EditFindForm({ find }: { find: EditFind }) {
         label="Hosted photos"
         initial={find.images}
         mode="upload"
-        hint="Stored by NotNew — durable. The first is the card hero. Drag order with the arrows."
+        hint="Stored by NotNew — durable. The first is the card hero. Reorder with the arrows."
+        onChange={(urls) => setHero(urls[0] ?? find.sourceImages[0] ?? "")}
       />
 
       <ImageManager
@@ -161,5 +203,41 @@ export function EditFindForm({ find }: { find: EditFind }) {
         </Link>
       </div>
     </form>
+
+    <aside className="lg:sticky lg:top-20 lg:self-start">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-500">
+        Live preview
+      </p>
+      <article className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="aspect-[4/3] w-full bg-zinc-100 dark:bg-zinc-900">
+          {hero ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={hero} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-zinc-400">
+              No image
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 p-4">
+          <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            {categoryLabel}
+          </span>
+          <h3 className="text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+            {title || "Untitled find"}
+          </h3>
+          <div className="mt-1 flex items-end justify-between text-sm">
+            <span className="font-semibold">{priceLabel}</span>
+            <span className="text-right text-xs text-zinc-500">
+              Seen on {SOURCE_LABELS[sourceSite as keyof typeof SOURCE_LABELS]}
+              {location && (
+                <span className="mt-0.5 block text-zinc-400">📍 {location}</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </article>
+    </aside>
+    </div>
   );
 }
