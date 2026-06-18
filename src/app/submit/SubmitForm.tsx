@@ -183,10 +183,11 @@ export function SubmitForm() {
         </label>
       </div>
 
-      {/* Durable hero image — hosted by us, survives after the listing ends. */}
+      {/* Optional uploaded hero — hosted by us, survives after the listing ends. */}
       <ImageUploader />
       <p className="-mt-2 text-xs text-zinc-500">
-        A hero image is required. It&apos;s hosted by NotNew, so it stays even
+        Upload a hero image, or skip it — if you fetched photos from the
+        listing, we&apos;ll keep a copy of the first one so the card stays put
         after the original listing goes away.
       </p>
 

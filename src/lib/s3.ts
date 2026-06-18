@@ -52,6 +52,79 @@ export function isAllowedImageUrl(url: string): boolean {
   return url.startsWith(`https://${BUCKET}.s3.${REGION}.amazonaws.com/finds/`);
 }
 
+const CACHE_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+  "image/gif": "gif",
+};
+
+function isSafePublicHost(u: URL): boolean {
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  const host = u.hostname.toLowerCase();
+  return !(
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host.endsWith(".local") ||
+    host.startsWith("10.") ||
+    host.startsWith("192.168.") ||
+    host.startsWith("169.254.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+  );
+}
+
+/**
+ * Download one external image and store it in our bucket so it survives after
+ * the source listing dies. Returns the durable public URL, or null on failure.
+ */
+export async function cacheExternalImage(rawUrl: string): Promise<string | null> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (!isSafePublicHost(url)) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "NotNewBot/1.0 (+https://notnew.com)" },
+      redirect: "follow",
+    });
+    if (!res.ok) return null;
+
+    const ct = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+    const ext = CACHE_EXT[ct];
+    if (!ext) return null;
+
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.byteLength === 0 || bytes.byteLength > 10_000_000) return null;
+
+    const key = `finds/${randomUUID()}.${ext}`;
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+        Body: bytes,
+        ContentType: ct,
+      }),
+    );
+
+    return CDN
+      ? `https://${CDN}/${key}`
+      : `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** Extract the S3 object key from one of our public image URLs. */
 function keyFromUrl(url: string): string | null {
   if (!isAllowedImageUrl(url)) return null;

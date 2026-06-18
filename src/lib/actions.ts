@@ -6,7 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { requireStaff, requireAdmin } from "@/lib/admin";
 import { CATEGORIES } from "@/lib/categories";
-import { createUploadUrl, isAllowedImageUrl, deleteImages } from "@/lib/s3";
+import {
+  createUploadUrl,
+  isAllowedImageUrl,
+  deleteImages,
+  cacheExternalImage,
+} from "@/lib/s3";
 import { extractLocation, extractListing, type ListingMeta } from "@/lib/scrape";
 import type { Category, SourceSite } from "@prisma/client";
 
@@ -98,9 +103,6 @@ export async function submitFind(
     .filter((u) => isAllowedImageUrl(u))
     .slice(0, 12);
 
-  if (images.length === 0)
-    return { error: "Add a hero image — it stays even after the listing ends." };
-
   // Hotlinked images from the source listing — stored as hrefs, not copied.
   // They gracefully disappear in the UI when the source ad goes away.
   const sourceImages = formData
@@ -108,6 +110,22 @@ export async function submitFind(
     .map(String)
     .filter((u) => /^https?:\/\//.test(u))
     .slice(0, 12);
+
+  // Need at least one image from somewhere.
+  if (images.length === 0 && sourceImages.length === 0)
+    return { error: "Add at least one image, or fetch them from the listing." };
+
+  // No uploaded hero? Cache the first scraped image so the card has a durable
+  // face that survives after the source listing dies.
+  if (images.length === 0) {
+    for (const u of sourceImages) {
+      const cached = await cacheExternalImage(u);
+      if (cached) {
+        images.push(cached);
+        break;
+      }
+    }
+  }
 
   // Dedup on exact URL.
   const dupe = await prisma.find.findFirst({ where: { url } });
