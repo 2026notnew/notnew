@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { cacheExternalImage } from "@/lib/s3";
 import { ebayAdapter } from "./ebay";
+import { etsyAdapter } from "./etsy";
 import type { Candidate, SourceAdapter } from "./types";
 import type { SourceSite } from "@prisma/client";
 
 const ADAPTERS: Partial<Record<SourceSite, SourceAdapter>> = {
   EBAY: ebayAdapter,
+  ETSY: etsyAdapter,
 };
 
 const DAILY_CAP = Number(process.env.INGEST_DAILY_CAP ?? 30);

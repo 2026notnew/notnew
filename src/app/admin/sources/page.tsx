@@ -11,6 +11,7 @@ import {
 import { CATEGORIES, CATEGORY_BY_VALUE, SOURCE_LABELS } from "@/lib/categories";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { ebayAdapter } from "@/lib/ingest/ebay";
+import { etsyAdapter } from "@/lib/ingest/etsy";
 
 export const metadata: Metadata = { title: "Sources — NotNew" };
 
@@ -32,6 +33,7 @@ export default async function AdminSourcesPage() {
   ]);
 
   const ebayReady = ebayAdapter.isConfigured();
+  const etsyReady = etsyAdapter.isConfigured();
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
@@ -48,12 +50,25 @@ export default async function AdminSourcesPage() {
         </p>
       </header>
 
-      {!ebayReady && (
+      <div className="mb-6 flex flex-wrap gap-2 text-xs">
+        <span
+          className={`rounded px-2 py-1 font-semibold ${ebayReady ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" : "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"}`}
+        >
+          eBay {ebayReady ? "connected" : "not configured"}
+        </span>
+        <span
+          className={`rounded px-2 py-1 font-semibold ${etsyReady ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" : "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"}`}
+        >
+          Etsy {etsyReady ? "connected" : "not configured"}
+        </span>
+      </div>
+
+      {(!ebayReady || !etsyReady) && (
         <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
-          eBay isn&apos;t configured yet. Add <code>EBAY_CLIENT_ID</code> and{" "}
-          <code>EBAY_CLIENT_SECRET</code> to <code>.env.local</code> to enable
-          eBay ingestion. Searches for other sources will sit idle until those
-          adapters are built.
+          To enable a source, add its credentials to <code>.env.local</code>:{" "}
+          eBay needs <code>EBAY_CLIENT_ID</code> + <code>EBAY_CLIENT_SECRET</code>
+          ; Etsy needs <code>ETSY_API_KEY</code>. Searches for unconfigured or
+          unsupported sources sit idle.
         </div>
       )}
 
