@@ -15,6 +15,7 @@ export type SearchParams = {
   query: string;
   minPrice: number;
   limit: number;
+  region?: string | null; // used by regional sources like Craigslist
 };
 
 export interface SourceAdapter {

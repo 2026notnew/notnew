@@ -125,6 +125,7 @@ model SavedSearch {
   source    SourceSite
   query     String
   category  Category
+  region    String? // e.g. Craigslist site subdomain "sfbay"; ignored by API sources
   minPrice  Int        @default(100)
   active    Boolean    @default(true)
   lastRunAt DateTime?

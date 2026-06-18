@@ -448,15 +448,24 @@ export async function createSavedSearch(formData: FormData): Promise<void> {
   const source = String(formData.get("source") ?? "");
   const category = String(formData.get("category") ?? "");
   const minPrice = Math.max(100, Number(formData.get("minPrice") ?? 100) || 100);
+  const region =
+    String(formData.get("region") ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "")
+      .slice(0, 40) || null;
 
   if (!query || !VALID_SOURCES.has(source as SourceSite) || !VALID_CATEGORIES.has(category))
     return;
+  // Craigslist is regional — it needs a site subdomain.
+  if (source === "CRAIGSLIST" && !region) return;
 
   await prisma.savedSearch.create({
     data: {
       query,
       source: source as SourceSite,
       category: category as Category,
+      region,
       minPrice,
     },
   });

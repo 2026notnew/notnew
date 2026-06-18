@@ -2,12 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { cacheExternalImage } from "@/lib/s3";
 import { ebayAdapter } from "./ebay";
 import { etsyAdapter } from "./etsy";
+import { craigslistAdapter } from "./craigslist";
 import type { Candidate, SourceAdapter } from "./types";
 import type { SourceSite } from "@prisma/client";
 
 const ADAPTERS: Partial<Record<SourceSite, SourceAdapter>> = {
   EBAY: ebayAdapter,
   ETSY: etsyAdapter,
+  CRAIGSLIST: craigslistAdapter,
 };
 
 const DAILY_CAP = Number(process.env.INGEST_DAILY_CAP ?? 30);
@@ -74,6 +76,7 @@ export async function runIngestion(): Promise<IngestResult> {
         query: s.query,
         minPrice: s.minPrice,
         limit: Math.min(remaining, 25),
+        region: s.region,
       });
     } catch {
       continue;

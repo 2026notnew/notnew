@@ -109,6 +109,14 @@ export default async function AdminSourcesPage() {
               className={`${inputClass} w-full`}
             />
           </label>
+          <label className="flex w-28 flex-col gap-1 text-xs font-medium">
+            CL site
+            <input
+              name="region"
+              placeholder="sfbay"
+              className={inputClass}
+            />
+          </label>
           <label className="flex w-24 flex-col gap-1 text-xs font-medium">
             Min $
             <input
@@ -123,6 +131,17 @@ export default async function AdminSourcesPage() {
             Add
           </button>
         </form>
+        <p className="mt-2 text-xs text-zinc-500">
+          “CL site” is required for Craigslist only — it&apos;s the subdomain of
+          the local site (e.g. <code>sfbay</code>, <code>losangeles</code>,{" "}
+          <code>chicago</code>). eBay and Etsy ignore it.
+        </p>
+        <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+          Heads up: Craigslist actively blocks automated requests, so its
+          searches often return nothing from a server. Pasting an individual
+          Craigslist link into <a href="/submit" className="underline">Submit a
+          Find</a> still works reliably — that&apos;s the dependable path for CL.
+        </p>
       </section>
 
       <section>
@@ -158,7 +177,8 @@ export default async function AdminSourcesPage() {
                     )}
                   </p>
                   <p className="text-xs text-zinc-500">
-                    {SOURCE_LABELS[s.source]} ·{" "}
+                    {SOURCE_LABELS[s.source]}
+                    {s.region && ` (${s.region})`} ·{" "}
                     {CATEGORY_BY_VALUE.get(s.category)?.label} · min ${s.minPrice}{" "}
                     ·{" "}
                     {s.lastRunAt
