@@ -25,6 +25,7 @@ enum Availability {
 }
 
 enum FindStatus {
+  DRAFT
   PENDING
   APPROVED
   REJECTED

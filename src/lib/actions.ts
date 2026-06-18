@@ -709,3 +709,55 @@ export async function restoreRevision(formData: FormData): Promise<void> {
   revalidatePath("/admin");
   revalidatePath("/");
 }
+
+// --- Rapid cataloguing (staff only) — creates DRAFT finds, photos added later ---
+
+export type QuickAddState =
+  | { error?: string; ok?: boolean; title?: string; id?: string }
+  | null;
+
+export async function quickAddFind(
+  _prev: QuickAddState,
+  formData: FormData,
+): Promise<QuickAddState> {
+  const staff = await requireStaff();
+
+  const title = String(formData.get("title") ?? "").trim();
+  const category = String(formData.get("category") ?? "");
+  const sourceSite = String(formData.get("sourceSite") ?? "OTHER") || "OTHER";
+  const url = String(formData.get("url") ?? "").trim();
+  const priceRaw = String(formData.get("price") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const eraTag = String(formData.get("eraTag") ?? "").trim() || null;
+  const location =
+    String(formData.get("location") ?? "").trim().slice(0, 120) || null;
+
+  if (title.length < 4) return { error: "Title is too short." };
+  if (!VALID_CATEGORIES.has(category)) return { error: "Pick a category." };
+  if (!VALID_SOURCES.has(sourceSite as SourceSite))
+    return { error: "Pick a source." };
+
+  const price = priceRaw ? Number(priceRaw) : null;
+  if (price !== null && (Number.isNaN(price) || price < 100))
+    return { error: "Price must be $100+ (or leave blank)." };
+
+  const find = await prisma.find.create({
+    data: {
+      title,
+      description: description || "Catalogued — details to follow.",
+      url: url || "",
+      category: category as Category,
+      sourceSite: sourceSite as SourceSite,
+      price,
+      eraTag,
+      location,
+      images: [],
+      sourceImages: [],
+      status: "DRAFT",
+      submittedBy: staff.id,
+    },
+  });
+
+  revalidatePath("/admin/drafts");
+  return { ok: true, title, id: find.id };
+}

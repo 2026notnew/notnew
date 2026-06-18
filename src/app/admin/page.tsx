@@ -59,7 +59,13 @@ export default async function AdminPage() {
           </p>
         </div>
         {staff.role === "ADMIN" && (
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link
+              href="/admin/catalog"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              Catalog →
+            </Link>
             <Link
               href="/admin/sources"
               className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
