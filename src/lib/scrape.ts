@@ -91,9 +91,72 @@ function fromText(html: string): string | null {
   return null;
 }
 
-export async function extractLocation(rawUrl: string): Promise<string | null> {
+function titleFromHtml(html: string): string | null {
+  const og = html.match(
+    /<meta[^>]+og:title[^>]+content=["']([^"']+)["']/i,
+  );
+  if (og) return clean(og[1]);
+  const t = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  return t ? clean(t[1]) : null;
+}
+
+function priceFromHtml(html: string): number | null {
+  const candidates = [
+    /<meta[^>]+(?:og:price:amount|product:price:amount)[^>]+content=["']([\d.,]+)["']/i,
+    /"price"\s*:\s*"?([\d.,]+)"?/i,
+    /itemprop=["']price["'][^>]+content=["']([\d.,]+)["']/i,
+  ];
+  for (const re of candidates) {
+    const m = html.match(re);
+    if (m) {
+      const n = Number(m[1].replace(/,/g, ""));
+      if (!Number.isNaN(n) && n > 0) return n;
+    }
+  }
+  return null;
+}
+
+function imagesFromHtml(html: string, base: URL): string[] {
+  const urls = new Set<string>();
+  // OpenGraph images first (usually the best hero candidates).
+  for (const m of html.matchAll(
+    /<meta[^>]+og:image(?::secure_url)?[^>]+content=["']([^"']+)["']/gi,
+  )) {
+    urls.add(m[1]);
+  }
+  // JSON-LD image fields.
+  for (const m of html.matchAll(/"image"\s*:\s*"([^"]+)"/gi)) urls.add(m[1]);
+  for (const m of html.matchAll(/"contentUrl"\s*:\s*"([^"]+)"/gi)) urls.add(m[1]);
+
+  return Array.from(urls)
+    .map((u) => {
+      try {
+        return new URL(u, base).toString();
+      } catch {
+        return null;
+      }
+    })
+    .filter((u): u is string => !!u && /^https?:\/\//.test(u))
+    .slice(0, 12);
+}
+
+export type ListingMeta = {
+  title: string | null;
+  price: number | null;
+  location: string | null;
+  images: string[];
+};
+
+/** Fetch a listing once and pull whatever metadata we can. Never throws. */
+export async function extractListing(rawUrl: string): Promise<ListingMeta> {
+  const empty: ListingMeta = {
+    title: null,
+    price: null,
+    location: null,
+    images: [],
+  };
   const url = isSafePublicUrl(rawUrl);
-  if (!url) return null;
+  if (!url) return empty;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
@@ -107,16 +170,25 @@ export async function extractLocation(rawUrl: string): Promise<string | null> {
       },
       redirect: "follow",
     });
-    if (!res.ok) return null;
+    if (!res.ok) return empty;
     const ct = res.headers.get("content-type") ?? "";
-    if (!ct.includes("text/html")) return null;
+    if (!ct.includes("text/html")) return empty;
 
-    // Cap how much we read — listings put metadata near the top anyway.
     const html = (await res.text()).slice(0, 500_000);
-    return fromJsonLd(html) ?? fromMeta(html) ?? fromText(html);
+    return {
+      title: titleFromHtml(html),
+      price: priceFromHtml(html),
+      location: fromJsonLd(html) ?? fromMeta(html) ?? fromText(html),
+      images: imagesFromHtml(html, url),
+    };
   } catch {
-    return null;
+    return empty;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** Back-compat helper used by submit fallback. */
+export async function extractLocation(rawUrl: string): Promise<string | null> {
+  return (await extractListing(rawUrl)).location;
 }

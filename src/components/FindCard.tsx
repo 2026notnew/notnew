@@ -22,7 +22,7 @@ function formatDate(date: Date): string {
 
 export function FindCard({ find, featured = false }: { find: FindCardData; featured?: boolean }) {
   const category = CATEGORY_BY_VALUE.get(find.category);
-  const cover = find.images[0];
+  const cover = find.images[0] ?? find.sourceImages[0];
   const avail = effectiveAvailability(find);
   const unavailable = avail !== "AVAILABLE";
 

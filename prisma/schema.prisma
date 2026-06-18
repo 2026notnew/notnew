@@ -92,6 +92,7 @@ model Find {
   price       Float?
   sourceSite  SourceSite
   images       String[]
+  sourceImages String[]
   category     Category
   eraTag       String?
   location     String?

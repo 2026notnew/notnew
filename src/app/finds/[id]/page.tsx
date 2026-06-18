@@ -10,6 +10,7 @@ import { effectiveAvailability } from "@/lib/availability";
 import { VoteButtons } from "@/components/VoteButtons";
 import { CommentForm } from "@/components/CommentForm";
 import { FlagButton } from "@/components/FlagButton";
+import { SourceGallery } from "@/components/SourceGallery";
 
 async function getFind(id: string) {
   return prisma.find.findFirst({
@@ -191,6 +192,10 @@ export default async function FindDetailPage({
       <p className="mt-6 whitespace-pre-line leading-relaxed text-zinc-700 dark:text-zinc-300">
         {find.description}
       </p>
+
+      {find.sourceImages.length > 0 && (
+        <SourceGallery images={find.sourceImages} />
+      )}
 
       <div className="mt-6">
         <FlagButton findId={find.id} canFlag={!!user} />

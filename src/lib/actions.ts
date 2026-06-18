@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { requireStaff, requireAdmin } from "@/lib/admin";
 import { CATEGORIES } from "@/lib/categories";
 import { createUploadUrl, isAllowedImageUrl, deleteImages } from "@/lib/s3";
-import { extractLocation } from "@/lib/scrape";
+import { extractLocation, extractListing, type ListingMeta } from "@/lib/scrape";
 import type { Category, SourceSite } from "@prisma/client";
 
 // Shown to paused/banned users when they attempt to contribute.
@@ -28,6 +28,17 @@ export async function requestUploadUrl(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Upload failed." };
   }
+}
+
+// Pre-fill the submit form by scraping the listing on demand.
+export async function fetchListingMeta(
+  url: string,
+): Promise<ListingMeta | { error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first." };
+  if (user.status !== "ACTIVE") return { error: BLOCKED_MSG };
+  if (!/^https?:\/\//.test(url)) return { error: "Enter a valid link first." };
+  return extractListing(url);
 }
 
 const VALID_CATEGORIES = new Set<string>(CATEGORIES.map((c) => c.value));
@@ -80,11 +91,22 @@ export async function submitFind(
   if (price !== null && (Number.isNaN(price) || price < 100))
     return { error: "NotNew is for items $100 and up." };
 
-  // Only accept image URLs we minted (uploaded to our own bucket/CDN).
+  // Durable hero/gallery images we host (uploaded to our own bucket/CDN).
   const images = formData
     .getAll("images")
     .map(String)
     .filter((u) => isAllowedImageUrl(u))
+    .slice(0, 12);
+
+  if (images.length === 0)
+    return { error: "Add a hero image — it stays even after the listing ends." };
+
+  // Hotlinked images from the source listing — stored as hrefs, not copied.
+  // They gracefully disappear in the UI when the source ad goes away.
+  const sourceImages = formData
+    .getAll("sourceImages")
+    .map(String)
+    .filter((u) => /^https?:\/\//.test(u))
     .slice(0, 12);
 
   // Dedup on exact URL.
@@ -106,6 +128,7 @@ export async function submitFind(
       location,
       expiresAt,
       images,
+      sourceImages,
       status: "PENDING",
       submittedBy: user.id,
     },

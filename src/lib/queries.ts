@@ -17,6 +17,7 @@ const findCardSelect = {
   price: true,
   sourceSite: true,
   images: true,
+  sourceImages: true,
   category: true,
   eraTag: true,
   location: true,
