@@ -133,6 +133,12 @@ export default async function AdminPage() {
                         Reject
                       </button>
                     </form>
+                    <Link
+                      href={`/admin/finds/${find.id}/edit`}
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    >
+                      Edit
+                    </Link>
                   </div>
                 </li>
               );
@@ -224,6 +230,12 @@ export default async function AdminPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/admin/finds/${find.id}/edit`}
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    >
+                      Edit
+                    </Link>
                     <form action={setFeatured}>
                       <input type="hidden" name="id" value={find.id} />
                       <input

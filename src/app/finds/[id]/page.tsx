@@ -96,6 +96,12 @@ export default async function FindDetailPage({
       {isStaff && (
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-2 text-xs dark:border-zinc-800 dark:bg-zinc-900">
           <span className="font-semibold text-zinc-500">Staff:</span>
+          <Link
+            href={`/admin/finds/${find.id}/edit`}
+            className="rounded border border-zinc-300 px-2 py-1 font-semibold hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            Edit
+          </Link>
           <form action={setFeatured}>
             <input type="hidden" name="id" value={find.id} />
             <input

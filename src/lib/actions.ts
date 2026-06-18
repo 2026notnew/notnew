@@ -497,3 +497,92 @@ export async function runIngestionNow(): Promise<void> {
   revalidatePath("/admin/sources");
   revalidatePath("/admin");
 }
+
+// --- Editing a find (staff only) ---
+
+export type EditState = { error?: string; ok?: boolean } | null;
+
+export async function updateFind(
+  _prev: EditState,
+  formData: FormData,
+): Promise<EditState> {
+  await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Missing find." };
+
+  const existing = await prisma.find.findUnique({
+    where: { id },
+    select: { images: true },
+  });
+  if (!existing) return { error: "Find not found." };
+
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const category = String(formData.get("category") ?? "");
+  const sourceSite = String(formData.get("sourceSite") ?? "");
+  const url = String(formData.get("url") ?? "").trim();
+  const priceRaw = String(formData.get("price") ?? "").trim();
+  const eraTag = String(formData.get("eraTag") ?? "").trim() || null;
+  const location =
+    String(formData.get("location") ?? "").trim().slice(0, 120) || null;
+  const expiresRaw = String(formData.get("expiresAt") ?? "").trim();
+
+  if (title.length < 4) return { error: "Give it a real title." };
+  if (description.length < 20)
+    return { error: "Description needs to be a bit longer (20+ chars)." };
+  if (!VALID_CATEGORIES.has(category)) return { error: "Pick a category." };
+  if (!VALID_SOURCES.has(sourceSite as SourceSite))
+    return { error: "Pick a source site." };
+  if (!/^https?:\/\//.test(url))
+    return { error: "Enter a valid link starting with http(s)://" };
+
+  const price = priceRaw ? Number(priceRaw) : null;
+  if (price !== null && (Number.isNaN(price) || price < 100))
+    return { error: "NotNew is for items $100 and up." };
+
+  let expiresAt: Date | null = null;
+  if (expiresRaw) {
+    const d = new Date(expiresRaw);
+    if (!Number.isNaN(d.getTime())) expiresAt = d;
+  }
+
+  const images = formData
+    .getAll("images")
+    .map(String)
+    .filter((u) => isAllowedImageUrl(u))
+    .slice(0, 12);
+  const sourceImages = formData
+    .getAll("sourceImages")
+    .map(String)
+    .filter((u) => /^https?:\/\//.test(u))
+    .slice(0, 12);
+
+  if (images.length === 0 && sourceImages.length === 0)
+    return { error: "Keep at least one image." };
+
+  await prisma.find.update({
+    where: { id },
+    data: {
+      title,
+      description,
+      category: category as Category,
+      sourceSite: sourceSite as SourceSite,
+      url,
+      price,
+      eraTag,
+      location,
+      expiresAt,
+      images,
+      sourceImages,
+    },
+  });
+
+  // Clean up any of our hosted images the editor removed.
+  const removed = existing.images.filter((u) => !images.includes(u));
+  if (removed.length) await deleteImages(removed);
+
+  revalidatePath(`/finds/${id}`);
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { ok: true };
+}
